@@ -21,11 +21,24 @@ services:
     container_name: wp-db
     volumes:
       - dbdata:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: wpdb
       MYSQL_USER: wpuser
       MYSQL_PASSWORD: wppass
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: wp-phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - db
 
 volumes:
   dbdata:
