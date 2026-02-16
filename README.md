@@ -1,32 +1,145 @@
-# EventPress-Demo: Custom WordPress Theme
----
+# WordPress Theme Project -- EventPress Demo
 
-## โครงสร้างโปรเจกต์ (Project Structure)
-เพื่อให้ Docker รันได้ถูกต้อง โปรดจัดเรียงไฟล์ตามนี้:
-```text
-EventPress-Demo/
-├── docker-compose.yml       # ไฟล์ตั้งค่า Docker (MySQL 5.7 + WP)
-├── README.md                # ไฟล์คู่มือนี้
-├── init-db/                 # โฟลเดอร์สำหรับใส่ฐานข้อมูลเริ่มต้น
-│   └── database.sql         # ไฟล์ SQL ที่ Export มาจากเครื่องหลัก
-└── wp-content/
-    ├── themes/
-    │   └── my-premium-theme/ # ไฟล์ธีมทั้งหมด (functions.php, style.css, etc.)
-    └── uploads/             # โฟลเดอร์รูปภาพที่อัปโหลด (ถ้ามี)
-```
+This project is a custom WordPress theme featuring **Blog** and **Events
+(Custom Post Type)** sections.\
+The project is fully runnable using **Docker Compose** to ensure
+consistent development environments.
 
-## การสั่งรันด้วย Docker
-```text
-docker-compose up -d
-```
-## การเข้าใช้งาน
-```text
+------------------------------------------------------------------------
 
-หน้าเว็บไซต์: http://localhost:8000
-จัดการฐานข้อมูล: http://localhost:8080 (phpMyAdmin)
-User: root | Password: password
+# 📌 Project Goal
 
-WordPress 
-User: Kanjana
-Pass: WP_kan@6629
-```
+Transform static design files into a fully dynamic WordPress theme.\
+All content is managed through the WordPress CMS.
+
+------------------------------------------------------------------------
+
+# 🚀 Features
+
+## 1️⃣ Blog
+
+-   Standard WordPress posts
+-   Categories
+-   Dynamic archive & single pages
+-   Featured image support
+
+## 2️⃣ Events (Custom Post Type)
+
+-   Dedicated `event` post type
+-   Custom fields:
+    -   Start Date
+    -   End Date
+-   Separate Event Categories
+-   Sorted dynamically by event date
+
+------------------------------------------------------------------------
+
+# 📁 Project Structure
+
+    EventPress-Demo/
+    │
+    ├── README.md
+    │
+    └── wordpress-docker/
+        │
+        ├── docker-compose.yml
+        │
+        ├── wp-content/
+        │   └── themes/
+        │       └── test-wordpress/
+        │           ├── style.css
+        │           ├── functions.php
+        │           ├── index.php
+        │           ├── header.php
+        │           ├── footer.php
+        │           ├── single.php
+        │           ├── archive.php
+        │           ├── template-parts/
+        │           └── assets/
+        │
+        └── db-init/
+            └── database.sql   (optional)
+
+------------------------------------------------------------------------
+
+# 🐳 Run with Docker
+
+## 1) Clone Repository
+
+    git clone https://github.com/Kkanjana/EventPress-Demo.git
+    cd EventPress-Demo/wordpress-docker
+
+## 2) Start Containers
+
+    docker compose up -d
+
+## 3) Access
+
+-   WordPress: http://localhost:8000
+-   phpMyAdmin: http://localhost:8080
+
+------------------------------------------------------------------------
+
+# 🔐 Test Login
+
+After installation:
+
+URL: http://localhost:8000/wp-admin\
+Username: Kanjana
+Password: WP_kan@6629
+
+(For demo purposes only)
+
+------------------------------------------------------------------------
+
+# 🗄 Database Configuration
+
+From docker-compose.yml:
+
+-   DB Host: db
+-   Database: wpdb
+-   User: wpuser
+-   Password: wppass
+-   Root Password: root
+
+------------------------------------------------------------------------
+
+# 🔁 Useful Commands
+
+Stop containers:
+
+    docker compose down
+
+Reset everything (remove database):
+
+    docker compose down -v
+
+View logs:
+
+    docker compose logs -f
+
+------------------------------------------------------------------------
+
+# 🛠 Development Requirements
+
+-   WordPress
+-   PHP
+-   HTML, CSS, JavaScript
+-   Understanding of WordPress Theme Development Best Practices
+
+------------------------------------------------------------------------
+
+# 📦 Deliverable
+
+This repository provides:
+
+-   Fully functional WordPress theme
+-   Docker environment for self-hosting
+-   Test admin account
+-   Optional SQL dump for database setup
+
+------------------------------------------------------------------------
+
+# 📌 License
+
+For educational and demo purposes only.
