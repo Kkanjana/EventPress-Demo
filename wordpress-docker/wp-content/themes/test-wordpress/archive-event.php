@@ -20,7 +20,7 @@ $GLOBALS['wp_query'] = $query;
     <div class="container">
         <div class="row mb-5">
             <div class="col-12 text-center">
-                <h2 class="fw-bold">All Events</h2>
+                <h2 class="fw-bold"><?php esc_html_e('All Events', 'test-wordpress'); ?></h2>
             </div>
         </div>
         <div class="row">
@@ -29,23 +29,29 @@ $GLOBALS['wp_query'] = $query;
                     <?php
                     $start      = get_post_meta(get_the_ID(), '_event_start', true);
                     $end        = get_post_meta(get_the_ID(), '_event_end', true);
-                    $start_text = $start ? date_i18n('d M Y', strtotime($start)) : '';
-                    $end_text   = $end ? date_i18n('d M Y', strtotime($end)) : '';
+                    $start_text = ($start && preg_match('/^\d{4}-\d{2}-\d{2}$/', $start))
+                                    ? date_i18n('d M Y', strtotime($start))
+                                    : '';
+                    $end_text   = ($end && preg_match('/^\d{4}-\d{2}-\d{2}$/', $end))
+                                    ? date_i18n('d M Y', strtotime($end))
+                                    : '';
                     $terms      = get_the_terms(get_the_ID(), 'event_category');
                     ?>
                     <div class="col-12 col-md-4 mb-4">
                         <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden blog-card">
                             <?php if (has_post_thumbnail()) : ?>
                                 <a href="<?php the_permalink(); ?>" class="d-block">
-                                    <?php the_post_thumbnail('medium', [
+                                    <?php
+                                    the_post_thumbnail('medium', [
                                         'class' => 'card-img-top object-fit-cover',
-                                        'style' => 'height:200px;'
-                                    ]); ?>
+                                        'style' => 'height:200px;',
+                                    ]);
+                                    ?>
                                 </a>
                             <?php else : ?>
                                 <a href="<?php the_permalink(); ?>" class="d-block">
                                     <img
-                                        src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/01.png'); ?>"
+                                        src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/no-image.png'); ?>"
                                         class="card-img-top object-fit-cover"
                                         style="height:200px;"
                                         alt="<?php echo esc_attr(get_the_title()); ?>">
@@ -64,48 +70,54 @@ $GLOBALS['wp_query'] = $query;
                                             <?php echo ' – ' . esc_html($end_text); ?>
                                         <?php endif; ?>
                                     <?php else : ?>
-                                        <?php echo esc_html__('Date TBA', 'your-textdomain'); ?>
+                                        <?php echo esc_html__('Date TBA', 'test-wordpress'); ?>
                                     <?php endif; ?>
                                 </p>
                                 <p class="text-muted small mb-0">
                                     <?php
                                     if (!empty($terms) && !is_wp_error($terms)) {
-                                        foreach ($terms as $i => $t) {
-                                            echo '<a href="' . esc_url(get_term_link($t)) . '" >' . esc_html($t->name) . '</a>';
-                                            if ($i < count($terms) - 1) echo ', ';
+                                        $term_links = [];
+                                        foreach ($terms as $t) {
+                                            $link = get_term_link($t);
+                                            if (!is_wp_error($link)) {
+                                                $term_links[] = '<a href="' . esc_url($link) . '">' . esc_html($t->name) . '</a>';
+                                            }
                                         }
+                                        echo !empty($term_links)
+                                            ? wp_kses_post(implode(', ', $term_links))
+                                            : '<span class="text-muted">' . esc_html__('No Category', 'test-wordpress') . '</span>';
                                     } else {
-                                        echo '<span class="text-white-50">No Category</span>';
+                                        echo '<span class="text-muted">' . esc_html__('No Category', 'test-wordpress') . '</span>';
                                     }
                                     ?>
                                 </p>
                             </div>
                             <div class="card-footer bg-white border-0 text-end">
                                 <a href="<?php the_permalink(); ?>" class="btn btn-outline-primary btn-sm">
-                                    View Detail
+                                    <?php esc_html_e('View Detail', 'test-wordpress'); ?>
                                 </a>
                             </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
             <?php else : ?>
-                <p class="text-muted">No events found.</p>
+                <p class="text-muted"><?php esc_html_e('No events found.', 'test-wordpress'); ?></p>
             <?php endif; ?>
         </div>
         <?php
         $pages = paginate_links([
             'base'      => str_replace(999999999, '%#%', esc_url(get_pagenum_link(999999999))),
             'format'    => '?paged=%#%',
-            'current'   => max(1, (int) get_query_var('paged')),
+            'current'   => $paged,
             'total'     => (int) $query->max_num_pages,
             'type'      => 'array',
-            'prev_text' => 'Previous',
-            'next_text' => 'Next',
+            'prev_text' => esc_html__('Previous', 'test-wordpress'),
+            'next_text' => esc_html__('Next', 'test-wordpress'),
         ]);
         ?>
         <?php if (is_array($pages)) : ?>
             <div class="mt-5">
-                <nav aria-label="Archive navigation">
+                <nav aria-label="<?php echo esc_attr__('Archive navigation', 'test-wordpress'); ?>">
                     <ul class="pagination justify-content-center">
                         <?php
                         foreach ($pages as $page) {
@@ -114,7 +126,7 @@ $GLOBALS['wp_query'] = $query;
                             } elseif (strpos($page, 'dots') !== false) {
                                 echo '<li class="page-item disabled"><span class="page-link">…</span></li>';
                             } else {
-                                echo '<li class="page-item">' . str_replace('page-numbers', 'page-link', $page) . '</li>';
+                                echo '<li class="page-item">' . wp_kses_post(str_replace('page-numbers', 'page-link', $page)) . '</li>';
                             }
                         }
                         ?>

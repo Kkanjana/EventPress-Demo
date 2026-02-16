@@ -1,3 +1,13 @@
+/*
+Theme Name: Test WordPress
+Theme URI:
+Author:
+Author URI:
+Description: Custom WordPress theme for Blog + Events.
+Version: 1.0.0
+Text Domain: test-wordpress
+*/
+
 /* =========================
    COLOR SYSTEM (Modern Navy)
    ========================= */
@@ -8,6 +18,7 @@
     --light-border: rgba(15,23,42,0.08);
     --footer-divider: rgba(255,255,255,0.08);
 }
+
 /* =========================
    HEADER (Professional Blog)
    ========================= */
@@ -67,6 +78,7 @@
         margin-top: 10px;
     }
 }
+
 /* =========================
    FOOTER (Professional Blog)
    ========================= */
@@ -147,6 +159,7 @@
         padding-left: 12px;
     }
 }
+
 /* =========================
    BLOG PAGE (Match Theme)
    ========================= */
@@ -251,6 +264,7 @@ a{
 a:hover{
     color: var(--primary-hover);
 }
+
 /* =========================
    BLOG SINGLE (Match Theme)
    ========================= */
@@ -355,6 +369,7 @@ a:hover{
     margin-right: 6px;
     margin-bottom: 6px;
 }
+
 /* =========================
    THUMB CARD (Match Theme)
    ========================= */
@@ -426,6 +441,7 @@ a:hover{
     background: rgba(15,23,42,0.06);
     color: rgba(15,23,42,0.55);
 }
+
 /* =========================
    BLOG CATEGORY
    ========================= */
@@ -436,4 +452,114 @@ a:hover{
     color:#0f172a;
     font-weight:700;
     letter-spacing:-0.1px;
+}
+
+/* =========================
+   HERO SWIPER (Home)
+   ========================= */
+.blog-index .swiper{
+    border-radius: 20px;
+    overflow: hidden;
+}
+.blog-index .swiper-slide{
+    position: relative;
+}
+.blog-index .swiper-caption{
+    background: linear-gradient(
+        180deg,
+        rgba(15,23,42,0.00) 0%,
+        rgba(15,23,42,0.75) 100%
+    );
+}
+.blog-index .swiper-caption h3{
+    letter-spacing: -0.2px;
+}
+.blog-index .swiper-button-next,
+.blog-index .swiper-button-prev{
+    color: #fff;
+}
+.blog-index .swiper-pagination-bullet{
+    background: rgba(255,255,255,0.5);
+    opacity: 1;
+}
+.blog-index .swiper-pagination-bullet-active{
+    background: #fff;
+}
+.blog-index .hero-banner{
+    height: 400px;
+}
+@media (max-width: 992px){
+    .blog-index .hero-banner{
+        height: 300px;
+    }
+}
+@media (max-width: 576px){
+    .blog-index .hero-banner{
+        height: 220px;
+    }
+}
+.hero-banner img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* =========================
+   HERO PILL (Glass)
+   ========================= */
+.blog-meta-pill.is-glass{
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff;
+}
+.blog-meta-pill.is-glass-soft{
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #fff;
+}
+
+/* =========================
+   POST CATEGORY TABS (Premium)
+   ========================= */
+.blog-index .nav-tabs{
+    border-bottom: 1px solid rgba(15,23,42,0.08);
+}
+.blog-index .nav-tabs .nav-link{
+    border: none;
+    color: rgba(15,23,42,0.65);
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 8px 16px;
+    transition: .15s ease;
+}
+.blog-index .nav-tabs .nav-link:not(.active):hover{
+    color: var(--primary-color);
+    background: rgba(37,99,235,0.08);
+}
+.blog-index .nav-tabs .nav-link.active{
+    background: var(--primary-color);
+    color: #fff;
+}
+.blog-index .nav-tabs .nav-link.active:hover{
+    background: var(--primary-hover);
+    color: #fff;
+}
+
+/* =========================
+   LOCATION + CONTACT polish
+   ========================= */
+.blog-index .card{
+    box-shadow: 0 8px 22px rgba(15,23,42,0.05);
+    transition: .15s ease;
+}
+.blog-index .card:hover{
+    transform: translateY(-3px);
+}
+.blog-index .form-control{
+    border-radius: 12px;
+    border: 1px solid rgba(15,23,42,0.12);
+}
+.blog-index .form-control:focus{
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
 }

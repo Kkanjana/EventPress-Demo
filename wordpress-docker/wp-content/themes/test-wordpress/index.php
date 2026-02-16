@@ -1,98 +1,165 @@
-<?php
-get_header();
-?>
-
+<?php get_header(); ?>
 <main id="primary" class="site-main blog-index py-5">
-
     <div class="container">
         <div class="mx-auto">
-
-            <!-- HERO / SWIPER -->
+            <!-- HERO / SWIPER (Fill to 3: Upcoming Events first, then Featured Posts by Tag) -->
             <section class="mb-5">
-                <div class="swiper mySwiper mb-5">
-                    <div class="swiper-wrapper">
-
-                        <div class="swiper-slide">
-                            <div class="position-relative ratio ratio-16x9 overflow-hidden rounded-4 blog-card">
-                                <div class="d-none d-md-block">
-                                    <video class="w-100 h-100 object-fit-cover" autoplay muted loop playsinline>
-                                        <source src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/placeholder_vdo.mp4'); ?>" type="video/mp4">
-                                    </video>
+                <?php
+                $today  = current_time('Y-m-d');
+                $slides = [];
+                // 1) Upcoming Events (priority)
+                $event_q = new WP_Query([
+                    'post_type'           => 'event',
+                    'posts_per_page'      => 3,
+                    'ignore_sticky_posts' => true,
+                    'meta_key'            => '_event_start',
+                    'orderby'             => 'meta_value',
+                    'meta_type'           => 'DATE',
+                    'order'               => 'ASC',
+                    'meta_query'          => [
+                        [
+                            'key'     => '_event_start',
+                            'value'   => $today,
+                            'compare' => '>=',
+                            'type'    => 'DATE',
+                        ],
+                    ],
+                    'fields'              => 'ids',
+                    'no_found_rows'       => true,
+                ]);
+                if (!empty($event_q->posts)) {
+                    foreach ($event_q->posts as $id) {
+                        $slides[] = ['id' => (int) $id, 'type' => 'event'];
+                        if (count($slides) >= 3) break;
+                    }
+                }
+                // 2) Fill remaining with Featured Posts (Tag: featured)
+                if (count($slides) < 3) {
+                    $need   = 3 - count($slides);
+                    $post_q = new WP_Query([
+                        'post_type'           => 'post',
+                        'posts_per_page'      => $need,
+                        'ignore_sticky_posts' => true,
+                        'tag'                 => 'featured',
+                        'orderby'             => 'date',
+                        'order'               => 'DESC',
+                        'fields'              => 'ids',
+                        'no_found_rows'       => true,
+                    ]);
+                    if (!empty($post_q->posts)) {
+                        foreach ($post_q->posts as $id) {
+                            $slides[] = ['id' => (int) $id, 'type' => 'post'];
+                            if (count($slides) >= 3) break;
+                        }
+                    }
+                }
+                ?>
+                <?php if (!empty($slides)) : ?>
+                    <div class="swiper mySwiper mb-5">
+                        <div class="swiper-wrapper">
+                            <?php foreach ($slides as $s) : ?>
+                                <?php
+                                $pid   = (int) $s['id'];
+                                $type  = $s['type'];
+                                $label = ($type === 'event')
+                                        ? esc_html__('UPCOMING EVENT', 'test-wordpress')
+                                        : esc_html__('FEATURED POST', 'test-wordpress');
+                                $title = get_the_title($pid);
+                                $link  = get_permalink($pid);
+                                // Subtitle: first taxonomy term
+                                $subtitle = '';
+                                if ($type === 'event') {
+                                    $terms = get_the_terms($pid, 'event_category');
+                                    if (!empty($terms) && !is_wp_error($terms)) {
+                                        $subtitle = $terms[0]->name;
+                                    }
+                                } else {
+                                    $cats = get_the_category($pid);
+                                    if (!empty($cats) && !is_wp_error($cats)) {
+                                        $subtitle = $cats[0]->name;
+                                    }
+                                }
+                                // Event date line
+                                $date_line = '';
+                                if ($type === 'event') {
+                                    $start = get_post_meta($pid, '_event_start', true);
+                                    $end   = get_post_meta($pid, '_event_end', true);
+                                    if ($start) {
+                                        $date_line = date_i18n('d M Y', strtotime($start));
+                                        if ($end) {
+                                            $date_line .= ' – ' . date_i18n('d M Y', strtotime($end));
+                                        }
+                                    }
+                                }
+                                // Excerpt (ไม่พึ่ง global post)
+                                $raw = get_post_field('post_excerpt', $pid);
+                                if (!$raw) {
+                                    $raw = get_post_field('post_content', $pid);
+                                }
+                                $excerpt = wp_trim_words(wp_strip_all_tags($raw), 14);
+                                // Image
+                                if (has_post_thumbnail($pid)) {
+                                    $img_html = get_the_post_thumbnail($pid, 'large', [
+                                        'class' => 'img-fluid w-100 h-100 object-fit-cover',
+                                    ]);
+                                } else {
+                                    $img_html = '<img src="' . esc_url(get_template_directory_uri() . '/assets/media/no-image.png') . '" class="img-fluid w-100 h-100 object-fit-cover" alt="' . esc_attr($title) . '">';
+                                }
+                                ?>
+                                <div class="swiper-slide">
+                                    <a href="<?php echo esc_url($link); ?>" class="d-block text-decoration-none">
+                                        <div class="position-relative hero-banner overflow-hidden rounded-4 blog-card">
+                                            <?php echo wp_kses_post($img_html); ?>
+                                            <div class="swiper-caption text-center position-absolute bottom-0 start-0 w-100 p-4 text-white user-select-none d-flex flex-column align-items-center justify-content-end">
+                                                <div class="d-flex gap-2 justify-content-center mb-2">
+                                                    <span class="blog-meta-pill is-glass">
+                                                        <?php echo esc_html($label); ?>
+                                                    </span>
+                                                    <?php if (!empty($subtitle)) : ?>
+                                                        <span class="blog-meta-pill is-glass-soft">
+                                                            <?php echo esc_html($subtitle); ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <h3 class="mb-1 fw-bold text-white">
+                                                    <?php echo esc_html($title); ?>
+                                                </h3>
+                                                <?php if (!empty($date_line)) : ?>
+                                                    <p class="mb-2 small opacity-75"><?php echo esc_html($date_line); ?></p>
+                                                <?php endif; ?>
+                                                <p class="mb-0 opacity-75">
+                                                    <?php echo esc_html($excerpt); ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </a>
                                 </div>
-                                <div class="d-block d-md-none">
-                                    <img
-                                        src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/01.png'); ?>"
-                                        class="img-fluid w-100 h-100 object-fit-cover"
-                                        alt="">
-                                </div>
-
-                                <div class="swiper-caption text-center position-absolute bottom-0 start-0 w-100 p-4 text-white user-select-none d-flex flex-column align-items-center justify-content-end">
-                                    <h3 class="mb-1 fw-bold">Slide 1</h3>
-                                    <p class="mb-0 opacity-75">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
-
-                        <div class="swiper-slide">
-                            <div class="position-relative ratio ratio-16x9 overflow-hidden rounded-4 blog-card">
-                                <div class="d-none d-md-block">
-                                    <img
-                                        src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/02.png'); ?>"
-                                        class="img-fluid w-100 h-100 object-fit-cover"
-                                        alt="">
-                                </div>
-                                <div class="d-block d-md-none">
-                                    <video class="w-100 h-100 object-fit-cover" autoplay muted loop playsinline>
-                                        <source src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/placeholder_vdo.mp4'); ?>" type="video/mp4">
-                                    </video>
-                                </div>
-
-                                <div class="swiper-caption text-center position-absolute bottom-0 start-0 w-100 p-4 text-white user-select-none d-flex flex-column align-items-center justify-content-end">
-                                    <h3 class="mb-1 fw-bold">Slide 2</h3>
-                                    <p class="mb-0 opacity-75">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="swiper-slide">
-                            <div class="position-relative ratio ratio-16x9 overflow-hidden rounded-4 blog-card">
-                                <div class="d-none d-md-block">
-                                    <img
-                                        src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/03.png'); ?>"
-                                        class="img-fluid w-100 h-100 object-fit-cover"
-                                        alt="">
-                                </div>
-                                <div class="d-block d-md-none">
-                                    <img
-                                        src="<?php echo esc_url(get_template_directory_uri() . '/assets/media/04.png'); ?>"
-                                        class="img-fluid w-100 h-100 object-fit-cover"
-                                        alt="">
-                                </div>
-
-                                <div class="swiper-caption text-center position-absolute bottom-0 start-0 w-100 p-4 text-white user-select-none d-flex flex-column align-items-center justify-content-end">
-                                    <h3 class="mb-1 fw-bold">Slide 3</h3>
-                                    <p class="mb-0 opacity-75">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                                </div>
-                            </div>
-                        </div>
-
+                        <div class="swiper-button-next"></div>
+                        <div class="swiper-button-prev"></div>
+                        <div class="swiper-pagination"></div>
                     </div>
-
-                    <div class="swiper-button-next"></div>
-                    <div class="swiper-button-prev"></div>
-                    <div class="swiper-pagination"></div>
-                </div>
+                <?php else : ?>
+                    <div class="p-4 rounded-4 blog-card text-center">
+                        <p class="text-muted mb-0"><?php esc_html_e('No featured content yet.', 'test-wordpress'); ?></p>
+                    </div>
+                <?php endif; ?>
             </section>
-
             <!-- POST CATEGORIES (TABS) -->
             <section class="mb-5">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="mb-0">Post Categories</h3>
+                    <h3 class="mb-0"><?php esc_html_e('Post Categories', 'test-wordpress'); ?></h3>
                 </div>
-
                 <?php
-                $categories = get_categories(['orderby' => 'name', 'order' => 'ASC']);
-                if (!empty($categories)) :
+                // เบาหน้าแรก: หมวดที่มีโพสต์ + จำกัดจำนวน
+                $categories = get_categories([
+                    'orderby'    => 'name',
+                    'order'      => 'ASC',
+                    'hide_empty' => true,
+                    'number'     => 6,
+                ]);
+                if (!empty($categories) && !is_wp_error($categories)) :
                 ?>
                     <ul class="nav nav-tabs mb-3" id="postCatsTab" role="tablist">
                         <?php foreach ($categories as $i => $cat) : ?>
@@ -111,7 +178,6 @@ get_header();
                             </li>
                         <?php endforeach; ?>
                     </ul>
-
                     <div class="tab-content" id="postCatsTabContent">
                         <?php foreach ($categories as $i => $cat) : ?>
                             <div
@@ -119,7 +185,6 @@ get_header();
                                 id="cat-<?php echo (int) $cat->term_id; ?>"
                                 role="tabpanel"
                                 aria-labelledby="cat-<?php echo (int) $cat->term_id; ?>-tab">
-
                                 <div class="row g-4 pt-3">
                                     <?php
                                     $posts = new WP_Query([
@@ -127,10 +192,11 @@ get_header();
                                         'cat'                 => (int) $cat->term_id,
                                         'posts_per_page'      => 4,
                                         'ignore_sticky_posts' => true,
+                                        'no_found_rows'       => true,
                                     ]);
-
                                     if ($posts->have_posts()) :
-                                        while ($posts->have_posts()) : $posts->the_post();
+                                        while ($posts->have_posts()) :
+                                            $posts->the_post();
                                     ?>
                                             <div class="col-12 col-sm-6 col-lg-3">
                                                 <?php get_template_part('template-parts/thumb-item'); ?>
@@ -140,285 +206,258 @@ get_header();
                                     else :
                                     ?>
                                         <div class="col-12">
-                                            <p class="text-muted mb-0">No posts found.</p>
+                                            <p class="text-muted mb-0"><?php esc_html_e('No posts found.', 'test-wordpress'); ?></p>
                                         </div>
                                     <?php
                                     endif;
                                     wp_reset_postdata();
                                     ?>
                                 </div>
-
                                 <div class="text-center mt-4">
                                     <a class="btn btn-outline-primary" href="<?php echo esc_url(get_category_link($cat->term_id)); ?>">
-                                        View more in <?php echo esc_html($cat->name); ?>
+                                        <?php
+                                        printf(
+                                            esc_html__('View more in %s', 'test-wordpress'),
+                                            esc_html($cat->name)
+                                        );
+                                        ?>
                                     </a>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php else : ?>
-                    <p class="text-muted mb-0">No categories found.</p>
+                    <p class="text-muted mb-0"><?php esc_html_e('No categories found.', 'test-wordpress'); ?></p>
                 <?php endif; ?>
             </section>
-
             <!-- RECENT EVENTS -->
             <section class="mb-5">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="mb-0">Recent Events</h3>
+                    <h3 class="mb-0"><?php esc_html_e('Recent Events', 'test-wordpress'); ?></h3>
                     <a class="btn btn-outline-primary btn-sm" href="<?php echo esc_url(get_post_type_archive_link('event')); ?>">
-                        View All Events
+                        <?php esc_html_e('View All Events', 'test-wordpress'); ?>
                     </a>
                 </div>
-
-                <div class="row g-4">
-                    <?php
+                <?php
+                // Upcoming first, fallback to latest past events if none
+                $today  = current_time('Y-m-d');
+                $events = new WP_Query([
+                    'post_type'           => 'event',
+                    'posts_per_page'      => 3,
+                    'ignore_sticky_posts' => true,
+                    'meta_key'            => '_event_start',
+                    'orderby'             => 'meta_value',
+                    'order'               => 'ASC',
+                    'meta_type'           => 'DATE',
+                    'meta_query'          => [
+                        [
+                            'key'     => '_event_start',
+                            'value'   => $today,
+                            'compare' => '>=',
+                            'type'    => 'DATE',
+                        ],
+                    ],
+                    'no_found_rows'       => true,
+                ]);
+                if (!$events->have_posts()) {
+                    wp_reset_postdata();
                     $events = new WP_Query([
                         'post_type'           => 'event',
                         'posts_per_page'      => 3,
+                        'ignore_sticky_posts' => true,
                         'meta_key'            => '_event_start',
                         'orderby'             => 'meta_value',
-                        'order'               => 'ASC',
+                        'order'               => 'DESC',
                         'meta_type'           => 'DATE',
-                        'ignore_sticky_posts' => true,
+                        'meta_query'          => [
+                            [
+                                'key'     => '_event_start',
+                                'value'   => $today,
+                                'compare' => '<=',
+                                'type'    => 'DATE',
+                            ],
+                        ],
+                        'no_found_rows'       => true,
                     ]);
-
-                    if ($events->have_posts()) :
-                        while ($events->have_posts()) : $events->the_post();
-                    ?>
+                }
+                ?>
+                <div class="row g-4">
+                    <?php if ($events->have_posts()) : ?>
+                        <?php while ($events->have_posts()) : $events->the_post(); ?>
                             <div class="col-12 col-md-4">
                                 <?php get_template_part('template-parts/thumb-item-event'); ?>
                             </div>
-                    <?php
-                        endwhile;
-                    else :
-                    ?>
+                        <?php endwhile; ?>
+                    <?php else : ?>
                         <div class="col-12">
-                            <p class="text-muted mb-0">No events found.</p>
+                            <p class="text-muted mb-0"><?php esc_html_e('No events found.', 'test-wordpress'); ?></p>
                         </div>
-                    <?php
-                    endif;
-                    wp_reset_postdata();
-                    ?>
+                    <?php endif; ?>
+                    <?php wp_reset_postdata(); ?>
                 </div>
             </section>
-
             <!-- LOCATION -->
             <section class="mb-5">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="mb-0">Location</h3>
+                    <h3 class="mb-0"><?php esc_html_e('Location', 'test-wordpress'); ?></h3>
                 </div>
-
+                <?php
+                $title     = get_theme_mod('loc_bkk_title', esc_html__('Bangkok Office', 'test-wordpress'));
+                $address   = get_theme_mod('loc_bkk_address', '');
+                $map_url   = get_theme_mod('loc_bkk_map_url', '#');
+                $embed_src = get_theme_mod('loc_map_embed_src', '');
+                ?>
                 <div class="row g-4 align-items-stretch">
                     <div class="col-12 col-lg-6">
-                        <div class="d-flex flex-column gap-3 h-100">
-                            <div class="card p-3 border-0 rounded-4 blog-card">
-                                <h6 class="mb-1 fw-bold">Bangkok Office</h6>
-                                <p class="small text-muted mb-2">Address</p>
-                                <a href="#" class="small text-decoration-none" style="color: var(--primary-color);">
-                                    View on map
+                        <div class="card p-4 border-0 rounded-4 blog-card h-100">
+                            <h6 class="mb-2 fw-bold"><?php echo esc_html($title); ?></h6>
+                            <p class="small text-muted mb-3">
+                                <?php echo nl2br(esc_html($address)); ?>
+                            </p>
+                            <?php if ($map_url && $map_url !== '#') : ?>
+                                <a
+                                    href="<?php echo esc_url($map_url); ?>"
+                                    class="small text-decoration-none fw-semibold"
+                                    target="_blank"
+                                    rel="noopener">
+                                    <?php esc_html_e('View on map →', 'test-wordpress'); ?>
                                 </a>
-                            </div>
-
-                            <div class="card p-3 border-0 rounded-4 blog-card">
-                                <h6 class="mb-1 fw-bold">Chiang Mai Office</h6>
-                                <p class="small text-muted mb-2">Address</p>
-                                <a href="#" class="small text-decoration-none" style="color: var(--primary-color);">
-                                    View on map
-                                </a>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
-
                     <div class="col-12 col-lg-6">
-                        <div class="ratio ratio-16x9 h-100 rounded-4 overflow-hidden blog-card">
-                            <iframe
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.57560607019!2d100.53903597509613!3d13.744124897471206!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x311d617707559737%3A0x1df4ed57b0a68f56!2sPlaimanas%20%3A%3A*2A!5e0!3m2!1sen!2sth!4v1770285986911!5m2!1sen!2sth"
-                                width="600"
-                                height="450"
-                                style="border:0;"
-                                allowfullscreen=""
-                                loading="lazy"
-                                referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        <div class="hero-banner rounded-4 overflow-hidden blog-card">
+                            <?php if (!empty($embed_src)) : ?>
+                                <iframe
+                                    src="<?php echo esc_url($embed_src); ?>"
+                                    width="100%"
+                                    height="100%"
+                                    style="border:0;"
+                                    allowfullscreen=""
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade"></iframe>
+                            <?php else : ?>
+                                <div class="h-100 d-flex align-items-center justify-content-center p-4">
+                                    <p class="text-muted text-center mb-0">
+                                        <?php esc_html_e('Please set Google Map embed URL in Appearance → Customize → Location', 'test-wordpress'); ?>
+                                    </p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </section>
-
-            <!-- FAQ (placeholder - can be converted to repeater later) -->
+            <!-- FAQ -->
             <section class="mb-5">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="mb-0">FAQ</h3>
+                    <h3 class="mb-0"><?php esc_html_e('FAQ', 'test-wordpress'); ?></h3>
                 </div>
-
-                <div class="accordion rounded-4 overflow-hidden" id="accordionExample">
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="headingOne">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                Accordion Item #1
-                            </button>
-                        </h2>
-                        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-                            <div class="accordion-body">
-                                <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-                                <ul>
-                                    <li>list 1</li>
-                                    <li>list 2</li>
-                                    <li>list 3</li>
-                                </ul>
+                <?php
+                $faq_query = new WP_Query([
+                    'post_type'      => 'faq',
+                    'posts_per_page' => -1,
+                    'orderby'        => 'menu_order',
+                    'order'          => 'ASC',
+                    'no_found_rows'  => true,
+                ]);
+                ?>
+                <?php if ($faq_query->have_posts()) : ?>
+                    <div class="accordion rounded-4 overflow-hidden" id="homeFaqAccordion">
+                        <?php $i = 0; ?>
+                        <?php while ($faq_query->have_posts()) : $faq_query->the_post(); ?>
+                            <?php
+                            $is_open   = $i === 0 ? 'show' : '';
+                            $collapsed = $i === 0 ? '' : 'collapsed';
+                            ?>
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header" id="faq-heading-<?php echo (int) $i; ?>">
+                                    <button class="accordion-button <?php echo esc_attr($collapsed); ?>"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#faq-collapse-<?php echo (int) $i; ?>"
+                                            aria-expanded="<?php echo $i === 0 ? 'true' : 'false'; ?>"
+                                            aria-controls="faq-collapse-<?php echo (int) $i; ?>">
+                                        <?php the_title(); ?>
+                                    </button>
+                                </h2>
+                                <div id="faq-collapse-<?php echo (int) $i; ?>"
+                                    class="accordion-collapse collapse <?php echo esc_attr($is_open); ?>"
+                                    aria-labelledby="faq-heading-<?php echo (int) $i; ?>"
+                                    data-bs-parent="#homeFaqAccordion">
+                                    <div class="accordion-body">
+                                        <?php the_content(); ?>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                            <?php $i++; ?>
+                        <?php endwhile; ?>
                     </div>
-
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="headingTwo">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                Accordion Item #2
-                            </button>
-                        </h2>
-                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-                            <div class="accordion-body">
-                                <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-                                <ul>
-                                    <li>list 1</li>
-                                    <li>list 2</li>
-                                    <li>list 3</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="headingThree">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                Accordion Item #3
-                            </button>
-                        </h2>
-                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
-                            <div class="accordion-body">
-                                <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-                                <ul>
-                                    <li>list 1</li>
-                                    <li>list 2</li>
-                                    <li>list 3</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    <?php wp_reset_postdata(); ?>
+                <?php else : ?>
+                    <p class="text-muted mb-0"><?php esc_html_e('No FAQs available.', 'test-wordpress'); ?></p>
+                <?php endif; ?>
             </section>
-
-            <!-- CONTACT (placeholder) -->
+            <!-- CONTACT -->
             <section class="mb-5">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="mb-0">Contact Us</h3>
+                    <h3 class="mb-0"><?php esc_html_e('Contact Us', 'test-wordpress'); ?></h3>
                 </div>
-
-                <div class="row g-4 mb-4">
+                <?php
+                $c_address  = get_theme_mod('contact_address', '');
+                $c_phone    = get_theme_mod('contact_phone', '');
+                $c_phoneTel = get_theme_mod('contact_phone_tel', '');
+                $c_email    = get_theme_mod('contact_email', '');
+                $c_fb       = get_theme_mod('contact_facebook', '#');
+                $c_ig       = get_theme_mod('contact_instagram', '#');
+                ?>
+                <div class="row g-4">
                     <div class="col-12 col-md-4">
                         <div class="h-100 p-4 border-0 rounded-4 text-center blog-card">
-                            <h6 class="mb-2 fw-bold">Address</h6>
+                            <h6 class="mb-2 fw-bold"><?php esc_html_e('Address', 'test-wordpress'); ?></h6>
                             <p class="mb-1 small text-muted">
-                                123 ถนนสุขุมวิท<br>
-                                เขตวัฒนา กรุงเทพฯ 10110
+                                <?php echo nl2br(esc_html($c_address)); ?>
                             </p>
                         </div>
                     </div>
-
                     <div class="col-12 col-md-4">
                         <div class="h-100 p-4 border-0 rounded-4 text-center blog-card">
-                            <h6 class="mb-2 fw-bold">Contact</h6>
-                            <p class="mb-1 small">
-                                <a href="tel:+6612345678" class="text-decoration-none" style="color: var(--primary-color);">
-                                    +66 12 345 678
-                                </a>
-                            </p>
-                            <p class="mb-1 small">
-                                <a href="mailto:info@example.com" class="text-decoration-none" style="color: var(--primary-color);">
-                                    info@example.com
-                                </a>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="col-12 col-md-4">
-                        <div class="h-100 p-4 border-0 rounded-4 text-center blog-card">
-                            <h6 class="mb-2 fw-bold">Follow Us</h6>
-                            <div class="d-flex justify-content-center gap-3">
-                                <a href="#" class="text-decoration-none" style="color: var(--primary-color);">Facebook</a>
-                                <a href="#" class="text-decoration-none" style="color: var(--primary-color);">Instagram</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card p-4 border-0 rounded-4 blog-card">
-                    <h5 class="fw-bold mb-3">Contact Form</h5>
-                    <form>
-                        <div class="row g-3">
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-control" placeholder="Your name">
-                            </div>
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Company</label>
-                                <input type="text" class="form-control" placeholder="Your Company">
-                            </div>
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="tel" class="form-control" placeholder="Your phone">
-                            </div>
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" placeholder="Your email">
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Message</label>
-                                <textarea class="form-control" rows="4" placeholder="Your message"></textarea>
-                            </div>
-
-                            <div class="col-12">
-                                <button type="button" class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#submitSuccessModal">
-                                    Send Message
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="modal fade" id="submitSuccessModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content text-center">
-                            <div class="modal-header border-0">
-                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body pb-4">
-                                <h4 class="mb-2">Thank You!</h4>
-                                <p class="text-muted mb-0">
-                                    Your message has been successfully sent.<br>
-                                    We will get back to you shortly.
+                            <h6 class="mb-2 fw-bold"><?php esc_html_e('Contact', 'test-wordpress'); ?></h6>
+                            <?php if (!empty($c_phone) && !empty($c_phoneTel)) : ?>
+                                <p class="mb-1 small">
+                                    <a href="tel:<?php echo esc_attr($c_phoneTel); ?>" class="text-decoration-none">
+                                        <?php echo esc_html($c_phone); ?>
+                                    </a>
                                 </p>
-                            </div>
-                            <div class="modal-footer border-0 justify-content-center">
-                                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">
-                                    Close
-                                </button>
+                            <?php endif; ?>
+                            <?php if (!empty($c_email)) : ?>
+                                <p class="mb-1 small">
+                                    <a href="mailto:<?php echo esc_attr($c_email); ?>" class="text-decoration-none">
+                                        <?php echo esc_html($c_email); ?>
+                                    </a>
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="h-100 p-4 border-0 rounded-4 text-center blog-card">
+                            <h6 class="mb-2 fw-bold"><?php esc_html_e('Follow Us', 'test-wordpress'); ?></h6>
+                            <div class="d-flex justify-content-center gap-3">
+                                <?php if (!empty($c_fb) && $c_fb !== '#') : ?>
+                                    <a href="<?php echo esc_url($c_fb); ?>" target="_blank" rel="noopener" class="text-decoration-none">
+                                        <?php esc_html_e('Facebook', 'test-wordpress'); ?>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if (!empty($c_ig) && $c_ig !== '#') : ?>
+                                    <a href="<?php echo esc_url($c_ig); ?>" target="_blank" rel="noopener" class="text-decoration-none">
+                                        <?php esc_html_e('Instagram', 'test-wordpress'); ?>
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </section>
-
         </div>
     </div>
-
 </main>
-
-<?php
-get_footer();
-?>
+<?php get_footer(); ?>

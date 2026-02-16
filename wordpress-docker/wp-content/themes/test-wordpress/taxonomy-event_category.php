@@ -5,20 +5,23 @@ $term_id = isset($term->term_id) ? (int) $term->term_id : 0;
 // Highlight events (2 items) ordered by start date
 $highlight_ids = [];
 $highlight     = new WP_Query([
-    'post_type'           => 'event',
-    'posts_per_page'      => 2,
-    'ignore_sticky_posts' => true,
-    'meta_key'            => '_event_start',
-    'orderby'             => 'meta_value',
-    'meta_type'           => 'DATE',
-    'order'               => 'ASC',
-    'tax_query'           => [
+    'post_type'              => 'event',
+    'posts_per_page'         => 2,
+    'ignore_sticky_posts'    => true,
+    'meta_key'               => '_event_start',
+    'orderby'                => 'meta_value',
+    'meta_type'              => 'DATE',
+    'order'                  => 'ASC',
+    'tax_query'              => [
         [
             'taxonomy' => 'event_category',
             'field'    => 'term_id',
             'terms'    => $term_id,
-        ]
+        ],
     ],
+    'no_found_rows'          => true,
+    'update_post_meta_cache' => false,
+    'update_post_term_cache' => false,
 ]);
 if ($highlight->have_posts()) {
     while ($highlight->have_posts()) {
@@ -44,33 +47,39 @@ $all_events = new WP_Query([
             'taxonomy' => 'event_category',
             'field'    => 'term_id',
             'terms'    => $term_id,
-        ]
+        ],
     ],
 ]);
 ?>
 <main class="archive-page py-5 blog-category">
     <div class="container">
         <div class="mb-4 text-center">
-            <h2 class="mb-1 fw-bold"><?php single_term_title(); ?></h2>
+            <h2 class="mb-1 fw-bold">
+                <?php echo esc_html(single_term_title('', false)); ?>
+            </h2>
             <?php if (!empty($term->description)) : ?>
                 <p class="text-muted mb-0"><?php echo esc_html($term->description); ?></p>
             <?php endif; ?>
         </div>
         <!-- Highlight -->
         <div class="text-start mb-2">
-            <h4 class="mb-0">Highlight Events</h4>
+            <h4 class="mb-0"><?php esc_html_e('Highlight Events', 'test-wordpress'); ?></h4>
         </div>
         <div class="row g-4 pb-5">
             <?php if (!empty($highlight_ids)) : ?>
                 <?php
                 $highlight_render = new WP_Query([
-                    'post_type'           => 'event',
-                    'post__in'            => $highlight_ids,
-                    'orderby'             => 'post__in',
-                    'posts_per_page'      => 2,
-                    'ignore_sticky_posts' => true,
+                    'post_type'              => 'event',
+                    'post__in'               => $highlight_ids,
+                    'orderby'                => 'post__in',
+                    'posts_per_page'         => 2,
+                    'ignore_sticky_posts'    => true,
+                    'no_found_rows'          => true,
+                    'update_post_meta_cache' => false,
+                    'update_post_term_cache' => false,
                 ]);
-                while ($highlight_render->have_posts()) : $highlight_render->the_post();
+                while ($highlight_render->have_posts()) :
+                    $highlight_render->the_post();
                 ?>
                     <div class="col-12 col-md-6">
                         <?php get_template_part('template-parts/thumb-item-event'); ?>
@@ -78,13 +87,13 @@ $all_events = new WP_Query([
                 <?php endwhile; wp_reset_postdata(); ?>
             <?php else : ?>
                 <div class="col-12">
-                    <p class="text-muted mb-0">No highlight events found.</p>
+                    <p class="text-muted mb-0"><?php esc_html_e('No highlight events found.', 'test-wordpress'); ?></p>
                 </div>
             <?php endif; ?>
         </div>
         <!-- All -->
         <div class="text-start mb-2">
-            <h4 class="mb-0">All Events</h4>
+            <h4 class="mb-0"><?php esc_html_e('All Events', 'test-wordpress'); ?></h4>
         </div>
         <div class="row g-4">
             <?php if ($all_events->have_posts()) : ?>
@@ -95,7 +104,7 @@ $all_events = new WP_Query([
                 <?php endwhile; wp_reset_postdata(); ?>
             <?php else : ?>
                 <div class="col-12">
-                    <p class="text-muted mb-0">No events found.</p>
+                    <p class="text-muted mb-0"><?php esc_html_e('No events found.', 'test-wordpress'); ?></p>
                 </div>
             <?php endif; ?>
         </div>
@@ -105,14 +114,14 @@ $all_events = new WP_Query([
             'base'      => str_replace(999999999, '%#%', esc_url(get_pagenum_link(999999999))),
             'format'    => '?paged=%#%',
             'type'      => 'array',
-            'current'   => max(1, (int) get_query_var('paged')),
+            'current'   => $paged,
             'total'     => (int) $all_events->max_num_pages,
-            'prev_text' => 'Previous',
-            'next_text' => 'Next',
+            'prev_text' => esc_html__('Previous', 'test-wordpress'),
+            'next_text' => esc_html__('Next', 'test-wordpress'),
         ]);
         ?>
         <?php if (is_array($pages)) : ?>
-            <nav aria-label="Archive navigation" class="mt-5">
+            <nav aria-label="<?php echo esc_attr__('Archive navigation', 'test-wordpress'); ?>" class="mt-5">
                 <ul class="pagination justify-content-center">
                     <?php
                     foreach ($pages as $page) {
@@ -121,7 +130,7 @@ $all_events = new WP_Query([
                         } elseif (strpos($page, 'dots') !== false) {
                             echo '<li class="page-item disabled"><span class="page-link">…</span></li>';
                         } else {
-                            echo '<li class="page-item">' . str_replace('page-numbers', 'page-link', $page) . '</li>';
+                            echo '<li class="page-item">' . wp_kses_post(str_replace('page-numbers', 'page-link', $page)) . '</li>';
                         }
                     }
                     ?>
